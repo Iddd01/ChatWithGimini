@@ -1,0 +1,84 @@
+Option Explicit
+
+Private TextToSpeech As String
+Private SNlM0e As String
+Private ConversationId As String
+Private ResponseId As String
+Private ChoiceId As String
+Private Prompt As String
+
+Private Sub Cmd_ResetChat_Click()
+    SNlM0e = vbNullString
+    ConversationId = vbNullString
+    ResponseId = vbNullString
+    ChoiceId = vbNullString
+    Txt_ChatBox.Value = vbNullString
+    Txt_Prompt.Value = vbNullString
+    Prompt = vbNullString
+End Sub
+
+Private Sub Cmd_Send_Click()
+    If Txt_Cookie.Value = vbNullString Then
+        MsgBox "Error: Missing Cookie info", vbExclamation, "Error"
+        Exit Sub
+    End If
+    Prompt = Txt_Prompt.Value
+    Txt_ChatBox.Value = Txt_ChatBox.Value & vbNewLine & vbNewLine & "Me: " & Prompt
+    Txt_ChatBox.SetFocus
+    Txt_ChatBox.SelStart = Len(Txt_ChatBox.Value)
+    Txt_Prompt.Value = vbNullString
+    Call SendPrompt(Prompt, Txt_Cookie.Value)
+End Sub
+
+Private Sub SendPrompt(ByVal Prompt As String, ByVal Cookie As String)
+    Dim objRequest As GoogleBardRequest
+    Set objRequest = New GoogleBardRequest
+    With objRequest
+        .ConversationId = ConversationId
+        .ResponseId = ResponseId
+        .ChoiceId = ChoiceId
+        .Cookie = Cookie
+        .reqid = "0"
+        If SNlM0e = vbNullString Then
+            SNlM0e = .GetSNlM0e
+            .at = SNlM0e
+        Else: .at = SNlM0e
+        End If
+        .Prompt = Prompt
+        Dim objResponse As GoogleBardResponse
+        Set objResponse = .Execute
+        TextToSpeech = objResponse.Answer
+        ConversationId = objResponse.ConversationId
+        ChoiceId = objResponse.ChoiceId
+        ResponseId = objResponse.ResponseId
+        Txt_ChatBox.Value = Txt_ChatBox.Value & vbNewLine & vbNewLine & "Google Bard: " & TextToSpeech
+    End With
+    Txt_ChatBox.SetFocus
+    Txt_ChatBox.SelStart = Len(Txt_ChatBox.Value)
+End Sub
+
+Private Sub Cmd_Speak_Click()
+    Dim objSpVoice As Object
+    Set objSpVoice = CreateObject("SAPI.SpVoice")
+    Set objSpVoice.Voice = objSpVoice.GetVoices.Item(1)
+    objSpVoice.Speak TextToSpeech, 1
+    Do
+        DoEvents
+    Loop Until objSpVoice.WaitUntilDone(10)
+End Sub
+
+Private Sub Txt_Prompt_Change()
+    If Len(Txt_Prompt.Value) = 0 And Txt_Prompt.Value = vbNullString Then
+        Cmd_Send.Locked = True
+    Else: Cmd_Send.Locked = False
+    End If
+End Sub
+
+Private Sub Txt_Prompt_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
+    If KeyCode = 13 Then Call Cmd_Send_Click
+End Sub
+
+Private Sub UserForm_Initialize()
+    If Len(Txt_Prompt.Value) = 0 And Txt_Prompt.Value = vbNullString Then Cmd_Send.Locked = True
+End Sub
+
